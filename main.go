@@ -2,42 +2,43 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 )
 
-type requestBody struct {
-	Message string `json:"message"`
-}
-
-var task string
-
-func PostHandler(w http.ResponseWriter, r *http.Request) {
+func CreateMessages(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		var reqBody requestBody
-		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-			http.Error(w, "Ошибка декодирования:", http.StatusBadRequest)
+		var message Message
+		if errDecode := json.NewDecoder(r.Body).Decode(&message); errDecode != nil {
+			http.Error(w, errDecode.Error(), http.StatusBadRequest)
 			return
 		}
-		task = reqBody.Message
-		fmt.Fprintf(w, "Получено: %s\n", task)
-	} else {
-		fmt.Fprintf(w, "Разрешается только метод POST\n")
+		if errCreate := DB.Create(&message).Error; errCreate != nil {
+			http.Error(w, errCreate.Error(), http.StatusBadRequest)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(message)
 	}
 }
 
-func GetHandler(w http.ResponseWriter, r *http.Request) {
+func GetMessages(w http.ResponseWriter, r *http.Request) {
+	var messages []Message
 	if r.Method == http.MethodGet {
-		fmt.Fprintf(w, "hello, %s\n", task)
-	} else {
-		fmt.Fprintf(w, "Разрешается только метод GET\n")
+		if errFind := DB.Find(&messages).Error; errFind != nil {
+			http.Error(w, errFind.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(messages)
 	}
 }
 
 func main() {
+	InitDB()
+	DB.AutoMigrate(&Message{})
 	router := mux.NewRouter()
-	router.HandleFunc("/api/hello", PostHandler).Methods("POST")
-	router.HandleFunc("/api/hello", GetHandler).Methods("GET")
-	http.ListenAndServe(":8080", router)
+	router.HandleFunc("/api/messages", CreateMessages).Methods("POST")
+	router.HandleFunc("/api/messages", GetMessages).Methods("GET")
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
