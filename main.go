@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -37,6 +36,8 @@ func GetMessages(w http.ResponseWriter, r *http.Request) {
 
 func PatchMessages(w http.ResponseWriter, r *http.Request) {
 	var res Message
+	vars := mux.Vars(r)
+	id := vars["id"]
 	updates := map[string]interface{}{}
 	if r.Method == http.MethodPatch {
 		if errDecode := json.NewDecoder(r.Body).Decode(&res); errDecode != nil {
@@ -48,26 +49,27 @@ func PatchMessages(w http.ResponseWriter, r *http.Request) {
 		}
 		if res.IsDone == false || res.IsDone == true {
 			updates["is_done"] = res.IsDone
+		} else {
+			updates["is_done"] = res.IsDone
 		}
-		if errPatch := DB.Model(&Message{}).Where("id = ?", res.ID).Updates(updates).Error; errPatch != nil {
+		if errPatch := DB.Model(&Message{}).Where("id = ?", id).Updates(updates).Error; errPatch != nil {
 			http.Error(w, errPatch.Error(), http.StatusBadRequest)
 			return
 		}
 	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
 }
 
 func DeleteMessages(w http.ResponseWriter, r *http.Request) {
-	var res Message
+	vars := mux.Vars(r)
+	id := vars["id"]
 	if r.Method == http.MethodDelete {
-		if errDecode := json.NewDecoder(r.Body).Decode(&res); errDecode != nil {
-			http.Error(w, errDecode.Error(), http.StatusBadRequest)
-			return
-		}
-		if errDelete := DB.Delete(&Message{}, res.ID).Error; errDelete != nil {
+		if errDelete := DB.Delete(&Message{}, id).Error; errDelete != nil {
 			http.Error(w, errDelete.Error(), http.StatusBadRequest)
 			return
 		}
-		fmt.Fprintln(w, "Удалена запись с id", res.ID)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -77,7 +79,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/api/messages", CreateMessages).Methods("POST")
 	router.HandleFunc("/api/messages", GetMessages).Methods("GET")
-	router.HandleFunc("/api/messages", PatchMessages).Methods("PATCH")
-	router.HandleFunc("/api/messages", DeleteMessages).Methods("DELETE")
+	router.HandleFunc("/api/messages/{id}", PatchMessages).Methods("PATCH")
+	router.HandleFunc("/api/messages/{id}", DeleteMessages).Methods("DELETE")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
