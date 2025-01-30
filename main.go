@@ -44,16 +44,14 @@ func PatchMessages(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, errDecode.Error(), http.StatusBadRequest)
 			return
 		}
-		if res.Task != "" {
-			updates["task"] = res.Task
-		}
-		if res.IsDone == false || res.IsDone == true {
-			updates["is_done"] = res.IsDone
-		} else {
-			updates["is_done"] = res.IsDone
-		}
+		updates["task"] = res.Task
+		updates["is_done"] = res.IsDone
 		if errPatch := DB.Model(&Message{}).Where("id = ?", id).Updates(updates).Error; errPatch != nil {
 			http.Error(w, errPatch.Error(), http.StatusBadRequest)
+			return
+		}
+		if errFind := DB.Find(&res).Error; errFind != nil {
+			http.Error(w, errFind.Error(), http.StatusBadRequest)
 			return
 		}
 	}
