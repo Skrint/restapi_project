@@ -7,7 +7,9 @@ import (
 	"restapi_project/internal/database"
 	"restapi_project/internal/handlers"
 	"restapi_project/internal/taskService"
+	"restapi_project/internal/userService"
 	"restapi_project/internal/web/tasks"
+	"restapi_project/internal/web/users"
 )
 
 func main() {
@@ -20,7 +22,11 @@ func main() {
 	repo := taskService.NewTaskRepository(database.DB)
 	service := taskService.NewService(repo)
 
+	repoUser := userService.NewUserRepository(database.DB)
+	serviceUser := userService.NewService(repoUser)
+
 	handler := handlers.NewHandler(service)
+	handlerUser := handlers.NewUserHandler(serviceUser)
 
 	e := echo.New()
 
@@ -29,6 +35,9 @@ func main() {
 
 	strictHandler := tasks.NewStrictHandler(handler, nil)
 	tasks.RegisterHandlers(e, strictHandler)
+
+	strictUserHandler := users.NewStrictHandler(handlerUser, nil)
+	users.RegisterHandlers(e, strictUserHandler)
 
 	if err := e.Start(":8080"); err != nil {
 		log.Fatalf("failed to start with err: %v", err)
