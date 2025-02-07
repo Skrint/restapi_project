@@ -1,91 +1,90 @@
 package handlers
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/gorilla/mux"
-	"net/http"
-	"restapi_project/internal/database"
+	"context"
 	"restapi_project/internal/taskService"
-	"strconv"
+	"restapi_project/internal/web/tasks"
 )
 
 type Handler struct {
 	Service *taskService.TaskService
 }
 
+func (h *Handler) DeleteTasksId(ctx context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
+	taskID := request.Id
+	err := h.Service.DeleteTaskByID(uint(taskID))
+	if err != nil {
+		return nil, err
+	}
+	response := tasks.DeleteTasksId204Response{}
+	return response, nil
+}
+
+func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
+	taskID := request.Id
+	body := request.Body
+
+	taskToUpdate := taskService.Task{
+		Task:   *body.Task,
+		IsDone: *body.IsDone,
+	}
+
+	updatedTask, err := h.Service.UpdateTaskByID(uint(taskID), taskToUpdate)
+	if err != nil {
+		return nil, err
+	}
+
+	response := tasks.PatchTasksId200JSONResponse{
+		Id:     &updatedTask.ID,
+		Task:   &updatedTask.Task,
+		IsDone: &updatedTask.IsDone,
+	}
+	return response, nil
+}
+
+func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
+	allTasks, err := h.Service.GetAllTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	response := tasks.GetTasks200JSONResponse{}
+
+	for _, tsk := range allTasks {
+		task := tasks.Task{
+			Id:     &tsk.ID,
+			IsDone: &tsk.IsDone,
+			Task:   &tsk.Task,
+		}
+		response = append(response, task)
+	}
+
+	return response, nil
+}
+
+func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
+	taskRequest := request.Body
+	taskToCreate := taskService.Task{
+		Task:   *taskRequest.Task,
+		IsDone: *taskRequest.IsDone,
+	}
+	createdTask, err := h.Service.CreateTask(taskToCreate)
+
+	if err != nil {
+		return nil, err
+	}
+
+	response := tasks.PostTasks201JSONResponse{
+		Id:     &createdTask.ID,
+		Task:   &createdTask.Task,
+		IsDone: &createdTask.IsDone,
+	}
+
+	return response, nil
+}
+
 func NewHandler(service *taskService.TaskService) *Handler {
 	return &Handler{
 		Service: service,
 	}
-}
-
-func (h *Handler) GetTasksHandler(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.Service.GetAllTasks()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
-}
-
-func (h *Handler) PostTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var task taskService.Task
-	err := json.NewDecoder(r.Body).Decode(&task)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	createdTask, err := h.Service.CreateTask(task)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(createdTask)
-}
-
-func (h *Handler) UpdateTaskByID(w http.ResponseWriter, r *http.Request) {
-	var res taskService.Task
-	vars := mux.Vars(r)
-	id := vars["id"]
-	u64, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		fmt.Fprintln(w, err)
-	}
-	wd := uint(u64)
-	updates := map[string]interface{}{}
-	if errDecode := json.NewDecoder(r.Body).Decode(&res); errDecode != nil {
-		http.Error(w, errDecode.Error(), http.StatusBadRequest)
-		return
-	}
-	if res.Name != "" {
-		updates["name"] = res.Name
-	}
-	updates["is_done"] = res.IsDone
-	updatedTask, err := h.Service.UpdateTaskByID(wd, res)
-	if errFind := database.DB.First(&updatedTask, wd).Error; errFind != nil {
-		http.Error(w, errFind.Error(), http.StatusBadRequest)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedTask)
-}
-
-func (h *Handler) DeleteTaskByID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-	u64, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		fmt.Fprintln(w, err)
-	}
-	wd := uint(u64)
-	errDeleteTask := h.Service.DeleteTaskByID(wd)
-	if errDeleteTask != nil {
-		http.Error(w, errDeleteTask.Error(), http.StatusBadRequest)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }

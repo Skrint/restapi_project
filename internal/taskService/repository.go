@@ -37,11 +37,21 @@ func (r *taskRepository) GetAllTasks() ([]Task, error) {
 }
 
 func (r *taskRepository) UpdateTaskByID(id uint, task Task) (Task, error) {
-	updateTask := r.db.Model(&task).Where("id = ?", id).Updates(&task)
-	if updateTask.Error != nil {
-		return Task{}, updateTask.Error
+	var existingTask Task
+	result := r.db.First(&existingTask, id) // Find existing task
+	if result.Error != nil {
+		return Task{}, result.Error // Task not found
 	}
-	return task, nil
+
+	existingTask.Task = task.Task
+	existingTask.IsDone = task.IsDone
+
+	result = r.db.Save(&existingTask) // Save the changes
+	if result.Error != nil {
+		return Task{}, result.Error
+	}
+
+	return existingTask, nil
 }
 
 func (r *taskRepository) DeleteTaskByID(id uint) error {
