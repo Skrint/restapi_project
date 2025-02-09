@@ -2,12 +2,15 @@ package taskService
 
 import (
 	"gorm.io/gorm"
+	"log"
 )
 
 type TaskRepository interface {
 	CreateTask(task Task) (Task, error)
 
 	GetAllTasks() ([]Task, error)
+
+	GetTasksByUserID(userID uint) ([]Task, error)
 
 	UpdateTaskByID(id uint, task Task) (Task, error)
 
@@ -33,6 +36,16 @@ func (r *taskRepository) CreateTask(task Task) (Task, error) {
 func (r *taskRepository) GetAllTasks() ([]Task, error) {
 	var tasks []Task
 	err := r.db.Find(&tasks).Error
+	return tasks, err
+}
+
+func (r *taskRepository) GetTasksByUserID(userID uint) ([]Task, error) {
+	var tasks []Task
+	err := r.db.Where("user_id = ?", userID).Find(&tasks).Error
+	if err != nil {
+		log.Printf("Ошибка при получении задач для user_id %d: %v", userID, err)
+		return nil, err
+	}
 	return tasks, err
 }
 

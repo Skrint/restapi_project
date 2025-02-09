@@ -10,6 +10,29 @@ type Handler struct {
 	Service *taskService.TaskService
 }
 
+func (h *Handler) GetUsersUserIdTasks(ctx context.Context, request tasks.GetUsersUserIdTasksRequestObject) (tasks.GetUsersUserIdTasksResponseObject, error) {
+	userID := request.UserId
+	tasksByUserID, err := h.Service.GetTasksByUserID(uint(userID))
+	if err != nil {
+		return nil, err
+	}
+
+	response := tasks.GetUsersUserIdTasks200JSONResponse{}
+
+	for _, tsk := range tasksByUserID {
+		task := tasks.Task{
+			Id:        &tsk.ID,
+			IsDone:    &tsk.IsDone,
+			Task:      &tsk.Task,
+			CreatedAt: &tsk.CreatedAt,
+			UpdatedAt: &tsk.UpdatedAt,
+		}
+		response = append(response, task)
+	}
+
+	return response, nil
+}
+
 func (h *Handler) DeleteTasksId(ctx context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
 	taskID := request.Id
 	err := h.Service.DeleteTaskByID(uint(taskID))
@@ -35,9 +58,12 @@ func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRe
 	}
 
 	response := tasks.PatchTasksId200JSONResponse{
-		Id:     &updatedTask.ID,
-		Task:   &updatedTask.Task,
-		IsDone: &updatedTask.IsDone,
+		Id:        &updatedTask.ID,
+		Task:      &updatedTask.Task,
+		IsDone:    &updatedTask.IsDone,
+		CreatedAt: &updatedTask.CreatedAt,
+		UpdatedAt: &updatedTask.UpdatedAt,
+		UserId:    &updatedTask.UserID,
 	}
 	return response, nil
 }
@@ -52,13 +78,15 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 
 	for _, tsk := range allTasks {
 		task := tasks.Task{
-			Id:     &tsk.ID,
-			IsDone: &tsk.IsDone,
-			Task:   &tsk.Task,
+			Id:        &tsk.ID,
+			IsDone:    &tsk.IsDone,
+			Task:      &tsk.Task,
+			CreatedAt: &tsk.CreatedAt,
+			UpdatedAt: &tsk.UpdatedAt,
+			UserId:    &tsk.UserID,
 		}
 		response = append(response, task)
 	}
-
 	return response, nil
 }
 
@@ -67,6 +95,7 @@ func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestO
 	taskToCreate := taskService.Task{
 		Task:   *taskRequest.Task,
 		IsDone: *taskRequest.IsDone,
+		UserID: *taskRequest.UserId,
 	}
 	createdTask, err := h.Service.CreateTask(taskToCreate)
 
@@ -78,6 +107,7 @@ func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestO
 		Id:     &createdTask.ID,
 		Task:   &createdTask.Task,
 		IsDone: &createdTask.IsDone,
+		UserId: &createdTask.UserID,
 	}
 
 	return response, nil

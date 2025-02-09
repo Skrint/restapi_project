@@ -99,6 +99,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /users/{user_id}/tasks:
+    get:
+      summary: Get all tasks by user id
+      tags:
+        - tasks
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: integer
+          description: user id
+      responses:
+        '200':
+          description: list of tasks by user id
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
 
 
 
@@ -213,6 +234,15 @@ components:
           type: string
         is_done:
           type: boolean
+        user_id:
+          type: integer
+          format: uint
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     User:
       type: object
       properties:
@@ -223,6 +253,12 @@ components:
           type: string
         password:
           type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Error:
       type: object
       properties:

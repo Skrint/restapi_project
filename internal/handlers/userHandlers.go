@@ -20,9 +20,11 @@ func (u UserHandler) GetUsers(ctx context.Context, request users.GetUsersRequest
 
 	for _, usr := range allUsers {
 		user := users.User{
-			Id:       &usr.ID,
-			Email:    &usr.Email,
-			Password: &usr.Password,
+			Id:        &usr.ID,
+			Email:     &usr.Email,
+			Password:  &usr.Password,
+			CreatedAt: &usr.CreatedAt,
+			UpdatedAt: &usr.UpdatedAt,
 		}
 		response = append(response, user)
 	}
@@ -43,9 +45,11 @@ func (u UserHandler) PostUsers(ctx context.Context, request users.PostUsersReque
 	}
 
 	response := users.PostUsers201JSONResponse{
-		Id:       &createdUser.ID,
-		Email:    &createdUser.Email,
-		Password: &createdUser.Password,
+		Id:        &createdUser.ID,
+		Email:     &createdUser.Email,
+		Password:  &createdUser.Password,
+		CreatedAt: &createdUser.CreatedAt,
+		UpdatedAt: &createdUser.UpdatedAt,
 	}
 
 	return response, nil
@@ -76,9 +80,11 @@ func (u UserHandler) PatchUsersId(ctx context.Context, request users.PatchUsersI
 	}
 
 	response := users.PatchUsersId200JSONResponse{
-		Id:       &updatedUser.ID,
-		Email:    &updatedUser.Email,
-		Password: &updatedUser.Password,
+		Id:        &updatedUser.ID,
+		Email:     &updatedUser.Email,
+		Password:  &updatedUser.Password,
+		CreatedAt: &updatedUser.CreatedAt,
+		UpdatedAt: &updatedUser.UpdatedAt,
 	}
 	return response, nil
 }
